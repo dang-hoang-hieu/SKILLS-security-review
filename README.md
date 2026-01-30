@@ -7,10 +7,10 @@ A comprehensive Claude skill for automated security review of codebases, commits
 - **Full Codebase Review**: Intelligent analysis of entire project structure with framework detection
 - **Commit/PR Review**: Analyze specific changes with git diff parsing
 - **Framework Detection**: Automatically detects Django, Flask, Express, React, Spring, and more
-- **Phase-Based Severity**: Dual severity ratings for MVP and Production phases
+- **Phase-Specific Severity**: Separate MVP and Production modes for accurate risk assessment
 - **Smart Organization**: Groups findings by folder and security category
 - **Detailed Examples**: Comprehensive vulnerability examples with code samples
-- **Automated Reports**: Generates structured markdown reports in `reports/` directory
+- **Automated Reports**: Generates phase-specific markdown reports in `reports/` directory
 
 ## 📁 Structure
 
@@ -31,20 +31,26 @@ security-review/
 
 ### In Claude Code
 
+**Phase Selection (Required)**:
+- `mvp` - MVP/Pre-launch (focus on critical vulnerabilities only)
+- `production` - Production-ready (comprehensive security hardening)
+
 1. **Full codebase review**:
    ```
-   /security-review
-   /security-review codebase
+   /security-review mvp
+   /security-review production codebase
    ```
 
 2. **Commit review**:
    ```
-   /security-review commit:abc123
+   /security-review mvp commit:abc123
+   /security-review production commit:abc123
    ```
 
 3. **Pull request review**:
    ```
-   /security-review pr:42
+   /security-review mvp pr:42
+   /security-review production pr:42
    ```
 
 4. **Directory review**:
@@ -55,16 +61,18 @@ security-review/
 ### Standalone Scripts
 
 ```bash
-# Analyze codebase
-python scripts/analyze_codebase.py /path/to/project > analysis.json
+# Analyze codebase with phase
+python scripts/analyze_codebase.py /path/to/project --phase=mvp > analysis.json
+python scripts/analyze_codebase.py /path/to/project --phase=production > analysis.json
 
-# Analyze git changes
-python scripts/analyze_changes.py commit:abc123 > changes.json
-python scripts/analyze_changes.py pr:42 > pr-changes.json
-python scripts/analyze_changes.py range:main..feature > range.json
+# Analyze git changes with phase
+python scripts/analyze_changes.py commit:abc123 --phase=mvp > changes.json
+python scripts/analyze_changes.py pr:42 --phase=production > pr-changes.json
+python scripts/analyze_changes.py range:main..feature --phase=mvp > range.json
 
-# Generate report
-python scripts/generate_report.py analysis.json reports/my-report.md
+# Generate report (phase auto-detected from analysis JSON)
+python scripts/generate_report.py analysis.json
+python scripts/generate_report.py analysis.json reports/my-custom-report.md
 ```
 
 ## 🔐 Security Checks
@@ -80,19 +88,21 @@ python scripts/generate_report.py analysis.json reports/my-report.md
 
 ## 📊 Severity Levels
 
-### MVP Phase
-- **CRITICAL**: Hardcoded secrets, SQL injection, auth bypass, RCE
-- **HIGH**: Authorization issues, XSS, CSRF
-- **MEDIUM**: Missing rate limiting, weak crypto
-- **LOW**: Missing headers, outdated deps (no active exploits)
-- **INFO**: Code quality, best practices
+**Phase-Specific Evaluation**: Findings are rated based on selected phase for accurate prioritization.
 
-### Production Phase
+### MVP Phase (Ship Fast - Block Exploits)
+- **CRITICAL**: Hardcoded secrets, SQL injection, auth bypass, RCE
+- **HIGH**: Authorization issues, XSS, CSRF, IDOR
+- **INFO**: All other findings (rate limiting, weak crypto, headers, outdated deps, code quality)
+
+*MVP focuses on immediate exploit risks only. Hardening items deferred to production.*
+
+### Production Phase (Comprehensive Security)
 - **CRITICAL**: Any vulnerability allowing data breach/compromise
-- **HIGH**: Missing MFA, weak sessions, incomplete validation
-- **MEDIUM**: Outdated deps, missing monitoring
-- **LOW**: Minor misconfigurations
-- **INFO**: Documentation, testing recommendations
+- **HIGH**: Missing MFA, weak sessions, incomplete validation, XSS, CSRF
+- **MEDIUM**: Rate limiting, weak crypto, info disclosure, outdated deps, monitoring
+- **LOW**: Security headers, minor misconfigurations
+- **INFO**: Documentation, testing, code quality
 
 ## 🛠️ Framework Detection
 
@@ -110,13 +120,14 @@ Automatically detects and applies framework-specific security checks for:
 
 ## 📝 Report Output
 
-Reports are saved to `reports/security-review-<timestamp>.md` and include:
+Reports are saved to `reports/security-review-<phase>-<timestamp>.md` and include:
 
-- Executive summary with phase-specific risk counts
-- Detailed findings table with severity, location, and recommendations
+- Executive summary with phase-specific risk assessment
+- Detailed findings table with severity (for selected phase only)
 - Framework-specific security checklist compliance
-- Priority actions for MVP and Production
+- Priority actions tailored to the selected phase
 - Overall compliance score
+- Phase-specific guidance and next steps
 
 ## 🔧 Requirements
 
@@ -144,11 +155,12 @@ The `examples.md` file contains detailed code samples for each vulnerability typ
 
 ## 🎯 Best Practices
 
-1. Run security reviews on every PR before merge
-2. Address all CRITICAL and HIGH severity issues before MVP launch
-3. Implement full Production phase recommendations before production deployment
-4. Re-run reviews after dependency updates
-5. Use alongside manual penetration testing for comprehensive coverage
+1. **MVP Phase**: Run `/security-review mvp` on every PR - focus on blocking critical vulnerabilities
+2. **Production Phase**: Run `/security-review production` before deployment - comprehensive hardening
+3. Address all CRITICAL and HIGH severity issues for selected phase before proceeding
+4. Re-run reviews with same phase after fixes to verify remediation
+5. Transition from MVP to Production phase when ready for production deployment
+6. Use alongside manual penetration testing for comprehensive coverage
 
 ## 🔄 Installation
 

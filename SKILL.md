@@ -14,19 +14,29 @@ This skill performs automated security reviews on code with intelligent analysis
 
 ## Usage Modes
 
-1. **Full codebase review**: `/security-review codebase` or `/security-review`
-2. **Commit review**: `/security-review commit:abc123`
-3. **Pull request review**: `/security-review pr:123`
-4. **Directory review**: `/security-review path:src/auth`
+### Phase Selection (Required)
+
+Specify review phase for accurate severity assessment:
+- **mvp** - MVP/Pre-launch phase (focus on critical vulnerabilities only)
+- **production** - Production-ready phase (comprehensive security hardening)
+
+### Review Targets
+
+1. **Full codebase review**: `/security-review mvp` or `/security-review production codebase`
+2. **Commit review**: `/security-review mvp commit:abc123`
+3. **Pull request review**: `/security-review production pr:123`
+4. **Directory review**: `/security-review mvp path:src/auth`
+
+**Default**: If phase not specified, defaults to `production` (stricter checks)
 
 ## Review Process
 
 ### Step 1: Analyze Target
 
-Run the appropriate Python script based on the review type:
+Run the appropriate Python script with phase parameter:
 
-- **Codebase**: `python scripts/analyze_codebase.py`
-- **Changes**: `python scripts/analyze_changes.py <commit-hash-or-pr-number>`
+- **Codebase**: `python scripts/analyze_codebase.py [path] --phase=<mvp|production>`
+- **Changes**: `python scripts/analyze_changes.py <commit-hash-or-pr-number> --phase=<mvp|production>`
 
 These scripts intelligently:
 - Detect framework type (Django, Flask, Express, Spring, etc.)
@@ -108,27 +118,29 @@ For detailed examples of each vulnerability type, reference the `examples.md` fi
 
 ### Step 3: Severity Rating
 
-Evaluate each finding with **two-phase severity**:
+Evaluate findings based on **selected phase**:
 
-**MVP Phase** (Time-to-market priority):
+**MVP Phase** (Time-to-market priority - ship fast, block exploits):
 - **CRITICAL**: Hardcoded secrets, SQL injection, authentication bypass, RCE
-- **HIGH**: Authorization issues, XSS, CSRF without auth impact
-- **MEDIUM**: Missing rate limiting, weak crypto, info disclosure
-- **LOW**: Missing security headers, outdated dependencies (no active exploits)
-- **INFO**: Code quality, best practices, future improvements
+- **HIGH**: Authorization issues, XSS, CSRF
+- **INFO**: All other findings (defer to production phase)
 
-**Production Phase** (Security-hardened):
+**Production Phase** (Security-hardened - comprehensive protection):
 - **CRITICAL**: Any vulnerability allowing data breach or system compromise
-- **HIGH**: Missing MFA, weak session management, incomplete input validation
-- **MEDIUM**: Outdated dependencies (even without exploits), missing monitoring
-- **LOW**: Missing non-critical security headers, minor misconfigurations
-- **INFO**: Documentation, security testing recommendations
+- **HIGH**: Missing MFA, weak session management, incomplete input validation, XSS, CSRF
+- **MEDIUM**: Rate limiting, weak crypto, info disclosure, outdated dependencies, missing monitoring
+- **LOW**: Security headers, minor misconfigurations
+- **INFO**: Documentation, code quality, testing recommendations
+
+**Note**: The `--phase` flag ensures only relevant severity levels are applied to findings.
 
 ### Step 4: Generate Report
 
 Run: `python scripts/generate_report.py <analysis-output-json>`
 
-This creates a structured report in `reports/security-review-<timestamp>.md` using the template from `templates/security-report-template.md`.
+This creates a phase-specific report in `reports/security-review-<phase>-<timestamp>.md` using the template. The phase is automatically detected from the analysis JSON.
+
+**Note**: Reports are tailored to the specified phase, showing only relevant severity levels and recommendations.
 
 ## Framework-Specific Patterns
 

@@ -194,11 +194,19 @@ class CodebaseAnalyzer:
 def main():
     """Main execution function."""
     import sys
+    import argparse
 
-    # Get root path from args or use current directory
-    root_path = sys.argv[1] if len(sys.argv) > 1 else '.'
+    parser = argparse.ArgumentParser(description='Analyze codebase for security review')
+    parser.add_argument('path', nargs='?', default='.', help='Path to analyze')
+    parser.add_argument('--phase', choices=['mvp', 'production'], default='production',
+                        help='Review phase: mvp (critical only) or production (comprehensive)')
+    args = parser.parse_args()
+
+    root_path = args.path
+    phase = args.phase
 
     print(f"🔍 Analyzing codebase at: {root_path}", file=sys.stderr)
+    print(f"📋 Phase: {phase.upper()}", file=sys.stderr)
 
     analyzer = CodebaseAnalyzer(root_path)
 
@@ -214,6 +222,9 @@ def main():
 
     # Generate summary
     summary = analyzer.generate_summary()
+    summary['phase'] = phase
+    summary['review_type'] = 'Full Codebase Review'
+    summary['target'] = root_path
 
     # Print category summary
     print("\n📊 Category breakdown:", file=sys.stderr)

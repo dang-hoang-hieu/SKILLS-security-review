@@ -265,16 +265,18 @@ class ChangeAnalyzer:
 def main():
     """Main execution function."""
     import sys
+    import argparse
 
-    if len(sys.argv) < 2:
-        print("Usage: python analyze_changes.py <commit-hash|pr:NUMBER|range:START..END>", file=sys.stderr)
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='Analyze git changes for security review')
+    parser.add_argument('target', help='commit-hash, pr:NUMBER, or range:START..END')
+    parser.add_argument('repo_path', nargs='?', default='.', help='Repository path')
+    parser.add_argument('--phase', choices=['mvp', 'production'], default='production',
+                        help='Review phase: mvp (critical only) or production (comprehensive)')
+    args = parser.parse_args()
 
-    target = sys.argv[1]
-    repo_path = sys.argv[2] if len(sys.argv) > 2 else '.'
-
-    analyzer = ChangeAnalyzer(repo_path)
-
+    target = args.target
+    repo_path = args.repo_path
+    phase = args.phase
     # Determine analysis type
     if target.startswith('pr:'):
         pr_number = target.split(':', 1)[1]
