@@ -60,19 +60,25 @@ security-review/
 
 ### Standalone Scripts
 
+**Recommended: Use unified workflow script**
+
 ```bash
-# Analyze codebase with phase
+# Complete workflow (analyze + generate report + save file)
+python scripts/review.py mvp /path/to/project
+python scripts/review.py production .
+python scripts/review.py mvp commit:abc123
+python scripts/review.py production pr:42
+```
+
+**Advanced: Manual step-by-step**
+
+```bash
+# Step 1: Analyze
 python scripts/analyze_codebase.py /path/to/project --phase=mvp > analysis.json
-python scripts/analyze_codebase.py /path/to/project --phase=production > analysis.json
+python scripts/analyze_changes.py commit:abc123 --phase=production > changes.json
 
-# Analyze git changes with phase
-python scripts/analyze_changes.py commit:abc123 --phase=mvp > changes.json
-python scripts/analyze_changes.py pr:42 --phase=production > pr-changes.json
-python scripts/analyze_changes.py range:main..feature --phase=mvp > range.json
-
-# Generate report (phase auto-detected from analysis JSON)
+# Step 2: Generate report
 python scripts/generate_report.py analysis.json
-python scripts/generate_report.py analysis.json reports/my-custom-report.md
 ```
 
 ## 🔐 Security Checks

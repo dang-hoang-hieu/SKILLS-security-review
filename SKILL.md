@@ -31,20 +31,41 @@ Specify review phase for accurate severity assessment:
 
 ## Review Process
 
-### Step 1: Analyze Target
+### Complete Workflow (One Command)
+
+Use the unified review script that handles analysis, report generation, and file saving:
+
+```bash
+# Full codebase review
+python scripts/review.py <mvp|production> [path]
+
+# Commit review
+python scripts/review.py <mvp|production> commit:abc123
+
+# Pull request review
+python scripts/review.py <mvp|production> pr:123
+
+# Git range review
+python scripts/review.py <mvp|production> range:main..feature
+```
+
+**Output:**
+- Creates report file in `reports/security-review-<phase>-<timestamp>.md`
+- Displays report content in response
+- Shows file path for future reference
+
+### Manual Step-by-Step (Advanced)
+
+If you need to run steps separately:
+
+**Step 1: Analyze Target**
 
 Run the appropriate Python script with phase parameter:
 
 - **Codebase**: `python scripts/analyze_codebase.py [path] --phase=<mvp|production>`
 - **Changes**: `python scripts/analyze_changes.py <commit-hash-or-pr-number> --phase=<mvp|production>`
 
-These scripts intelligently:
-- Detect framework type (Django, Flask, Express, Spring, etc.)
-- Traverse project structure and group files by logical folders
-- Extract relevant code sections and changes
-- Apply framework-specific security patterns
-
-### Step 2: Security Checklist Review
+**Step 2: Security Checklist Review**
 
 For each file/folder group, check against these security categories:
 
@@ -116,7 +137,7 @@ For detailed examples of each vulnerability type, reference the `examples.md` fi
 - Search for "# XSS Examples" for cross-site scripting
 - And so on for each category
 
-### Step 3: Severity Rating
+**Step 3: Severity Rating**
 
 Evaluate findings based on **selected phase**:
 
@@ -134,13 +155,9 @@ Evaluate findings based on **selected phase**:
 
 **Note**: The `--phase` flag ensures only relevant severity levels are applied to findings.
 
-### Step 4: Generate Report
+**Step 4: Generate Report** (handled automatically by `review.py` script)
 
-Run: `python scripts/generate_report.py <analysis-output-json>`
-
-This creates a phase-specific report in `reports/security-review-<phase>-<timestamp>.md` using the template. The phase is automatically detected from the analysis JSON.
-
-**Note**: Reports are tailored to the specified phase, showing only relevant severity levels and recommendations.
+---
 
 ## Framework-Specific Patterns
 
