@@ -5,6 +5,7 @@ Extracts and organizes changes by folder for security review.
 """
 
 import os
+import sys
 import json
 import re
 import subprocess
@@ -14,50 +15,6 @@ from typing import Dict, List, Tuple, Set
 
 class ChangeAnalyzer:
     """Analyzes git changes for security review."""
-
-    # Patterns for detecting sensitive changes
-    SENSITIVE_PATTERNS = {
-        'secrets': [
-            r'api[_-]?key',
-            r'secret[_-]?key',
-            r'password',
-            r'token',
-            r'credential',
-            r'private[_-]?key',
-            r'aws[_-]?access',
-            r'AKIA[0-9A-Z]{16}',  # AWS Access Key
-            r'sk_live_[0-9a-zA-Z]{24,}',  # Stripe Live Key
-            r'ghp_[0-9a-zA-Z]{36}',  # GitHub Personal Access Token
-        ],
-        'auth': [
-            r'authenticate',
-            r'authorize',
-            r'login',
-            r'session',
-            r'jwt',
-            r'oauth',
-            r'@login_required',
-            r'@require_auth',
-        ],
-        'sql': [
-            r'execute\s*\(',
-            r'cursor\.',
-            r'\.raw\(',
-            r'SELECT.*FROM',
-            r'INSERT INTO',
-            r'UPDATE.*SET',
-            r'DELETE FROM',
-        ],
-        'dangerous_functions': [
-            r'eval\s*\(',
-            r'exec\s*\(',
-            r'os\.system',
-            r'subprocess\.call',
-            r'shell=True',
-            r'innerHTML',
-            r'dangerouslySetInnerHTML',
-        ],
-    }
 
     # File extensions to analyze
     CODE_EXTENSIONS = {
@@ -200,38 +157,33 @@ class ChangeAnalyzer:
 
         return categorized
 
-    def detect_security_issues(self, change: Dict) -> List[Dict]:
+    def format_changes_for_review(self, changes: List[Dict]) -> str:
         """
-        Detect potential security issues in a change.
-        Returns list of issues found.
+        Format changes as readable text for Claude security review.
+        Returns formatted diff with context.
         """
-        issues = []
+        output = []
 
-        for hunk in change.get('hunks', []):
-            hunk_text = '\n'.join(hunk)
+        for change in changes:
+            output.append(f"\n{'='*80}")
+            output.append(f"File: {change['path']}")
 
-            # Only check added lines
-            added_lines = [line[1:] for line in hunk if line.startswith('+') and not line.startswith('+++')]
-            added_text = '\n'.join(added_lines)
+            if change.get('status'):
+                output.append(f"Status: {change['status']}")
 
-            # Check each pattern category
-            for category, patterns in self.SENSITIVE_PATTERNS.items():
-                for pattern in patterns:
-                    matches = re.finditer(pattern, added_text, re.IGNORECASE)
-                    for match in matches:
-                        issues.append({
-                            'category': category,
-                            'pattern': pattern,
-                            'match': match.group(0),
-                            'file': change['path'],
-                        })
+            output.append(f"Changes: +{change.get('additions', 0)} -{change.get('deletions', 0)}")
+            output.append(f"{'='*80}\n")
 
-        return issues
+            for hunk in change.get('hunks', []):
+                output.extend(hunk)
+                output.append("")
+
+        return '\n'.join(output)
 
     def analyze_changes(self, diff_text: str) -> Dict:
         """
         Main analysis function.
-        Parses diff and organizes changes with security analysis.
+        Parses diff and organizes changes for Claude security review.
         """
         # Parse diff
         changes = self.parse_diff(diff_text)
@@ -239,11 +191,8 @@ class ChangeAnalyzer:
         # Categorize by directory
         categorized = self.categorize_changes(changes)
 
-        # Detect security issues
-        all_issues = []
-        for change in changes:
-            issues = self.detect_security_issues(change)
-            all_issues.extend(issues)
+        # Format for review
+        formatted_diff = self.format_changes_for_review(changes)
 
         # Statistics
         total_additions = sum(c.get('additions', 0) for c in changes)
@@ -254,9 +203,9 @@ class ChangeAnalyzer:
             'total_additions': total_additions,
             'total_deletions': total_deletions,
             'categories': {cat: len(files) for cat, files in categorized.items()},
-            'security_issues': all_issues,
             'categorized_changes': categorized,
             'all_changes': changes,
+            'formatted_diff': formatted_diff,  # For Claude to analyze
         }
 
         return summary
@@ -277,6 +226,10 @@ def main():
     target = args.target
     repo_path = args.repo_path
     phase = args.phase
+
+    # Initialize analyzer
+    analyzer = ChangeAnalyzer(repo_path)
+
     # Determine analysis type
     if target.startswith('pr:'):
         pr_number = target.split(':', 1)[1]
@@ -287,8 +240,13 @@ def main():
         start, end = range_spec.split('..')
         print(f"🔍 Analyzing range {start}..{end}...", file=sys.stderr)
         diff_text = analyzer.get_range_diff(start, end)
+    elif target.startswith('commit:'):
+        # Extract commit hash from commit: prefix
+        commit_hash = target.split(':', 1)[1]
+        print(f"🔍 Analyzing commit {commit_hash}...", file=sys.stderr)
+        diff_text = analyzer.get_commit_diff(commit_hash)
     else:
-        # Assume commit hash
+        # Assume commit hash without prefix
         print(f"🔍 Analyzing commit {target}...", file=sys.stderr)
         diff_text = analyzer.get_commit_diff(target)
 
@@ -300,23 +258,16 @@ def main():
     print("📊 Parsing and analyzing changes...", file=sys.stderr)
     summary = analyzer.analyze_changes(diff_text)
 
+    # Add metadata
+    summary['phase'] = phase
+    summary['review_type'] = 'Git Changes Review'
+    summary['target'] = target
+
     # Print summary
     print(f"\n📝 Changes summary:", file=sys.stderr)
     print(f"   Files changed: {summary['total_files']}", file=sys.stderr)
     print(f"   Lines added: {summary['total_additions']}", file=sys.stderr)
     print(f"   Lines deleted: {summary['total_deletions']}", file=sys.stderr)
-
-    if summary['security_issues']:
-        print(f"\n⚠️  {len(summary['security_issues'])} potential security issues detected", file=sys.stderr)
-
-        # Group by category
-        by_category = {}
-        for issue in summary['security_issues']:
-            cat = issue['category']
-            by_category[cat] = by_category.get(cat, 0) + 1
-
-        for cat, count in sorted(by_category.items()):
-            print(f"   {cat}: {count}", file=sys.stderr)
 
     print("\n📂 Categories:", file=sys.stderr)
     for cat, count in sorted(summary['categories'].items()):

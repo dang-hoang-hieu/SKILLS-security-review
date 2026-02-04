@@ -2,10 +2,10 @@
 name: security-review
 description: Perform comprehensive security review of code changes, git diffs, pull requests, or entire codebase. Detects vulnerabilities, secrets, authentication issues, and OWASP compliance. Generates severity-rated reports with MVP and Production phase distinctions.
 context: fork
-agent: Explore
-allowed-tools: [read_file, grep_search, semantic_search, run_in_terminal]
+agent: general-purpose
+allowed-tools: [read_file, write_file, grep_search, semantic_search, run_in_terminal]
 disable-model-invocation: false
-argument-hint: [codebase|commit:<hash>|pr:<number>|path:<directory>]
+argument-hint: [mvp|production] [codebase|commit:<hash>|pr:<number>|path:<directory>]
 ---
 
 # Security Review Skill
@@ -31,51 +31,36 @@ Specify review phase for accurate severity assessment:
 
 ## Review Process
 
-### ⚠️ MANDATORY: Use Review Script and Template
+### ⚠️ IMPORTANT: Claude-Powered Analysis
 
-**ALWAYS** use the unified review script - do NOT generate reports manually:
+This skill uses **Claude (you!)** to analyze security issues, NOT regex patterns. The workflow is:
+
+1. **Extract Changes**: Run analyzer script to get git diff
+2. **Claude Analyzes**: You read the formatted diff and identify real security issues
+3. **Generate Report**: Create security report using template
+
+### Workflow Steps
+
+**Step 1: Extract Git Changes**
+
+Run the analyzer to extract and format changes:
 
 ```bash
-# Full codebase review
-python scripts/review.py <mvp|production> [path]
+# For commit review
+python3 .claude/skills/security-review/scripts/analyze_changes.py commit:<hash> <repo-path> --phase=<mvp|production>
 
-# Commit review
-python scripts/review.py <mvp|production> commit:abc123
+# For PR review
+python3 .claude/skills/security-review/scripts/analyze_changes.py pr:<number> <repo-path> --phase=<mvp|production>
 
-# Pull request review
-python scripts/review.py <mvp|production> pr:123
-
-# Git range review
-python scripts/review.py <mvp|production> range:main..feature
+# For range review
+python3 .claude/skills/security-review/scripts/analyze_changes.py range:<start>..<end> <repo-path> --phase=<mvp|production>
 ```
 
-**Why This is Required:**
-- Ensures consistent report format using `templates/security-report-template.md`
-- Applies correct phase-specific severity filtering
-- Generates properly formatted findings tables
-- Saves reports to standardized location
+**Output**: JSON with `formatted_diff` containing human-readable changes
 
-**Output:**
-- Creates report file in `reports/security-review-<phase>-<timestamp>.md`
-- Displays report content in response
-- Shows file path for future reference
+**Step 2: Claude Security Analysis**
 
-**❌ DO NOT:** Write custom markdown reports or summaries - always invoke the script above
-
-### Manual Step-by-Step (Advanced)
-
-If you need to run steps separately:
-
-**Step 1: Analyze Target**
-
-Run the appropriate Python script with phase parameter:
-
-- **Codebase**: `python scripts/analyze_codebase.py [path] --phase=<mvp|production>`
-- **Changes**: `python scripts/analyze_changes.py <commit-hash-or-pr-number> --phase=<mvp|production>`
-
-**Step 2: Security Checklist Review**
-
-For each file/folder group, check against these security categories:
+YOU (Claude) will analyze the `formatted_diff` to identify REAL security issues by checking:
 
 #### 🔐 Authentication & Authorization
 - Weak password policies or storage
@@ -201,7 +186,57 @@ Evaluate findings based on **selected phase**:
 - ✅ SQL injection → CRITICAL for MVP (direct DB access)
 - ✅ Missing authentication on sensitive endpoint → CRITICAL for MVP (direct bypass)
 
-**Step 4: Generate Report** (handled automatically by `review.py` script)
+**Step 3: Generate Security Report**
+
+After analyzing the changes, create a markdown report following `templates/security-report-template.md`:
+
+- List each finding with: severity (based on phase), category, file, line, description, recommendation
+- Apply phase-specific severity using SEVERITY_MATRIX guidelines
+- Include executive summary with risk counts
+- Add framework-specific checklist compliance
+- Provide priority actions and next steps
+
+**CRITICAL**: Only report REAL security issues, not false positives like:
+- Variable names containing "password", "token", "secret" (unless actual hardcoded secrets)
+- Function names like "authenticate", "authorize" (unless missing proper implementation)
+- UI component imports that match SQL patterns (like "Select" from shadcn/ui)
+
+**⚠️ MANDATORY: Generate HTML Report and Minimal Terminal Output**
+
+You MUST generate an HTML report and output ONLY minimal text to terminal.
+
+**Template Selection**:
+- MVP phase: Use `.claude/skills/security-review/templates/mvp-report.html`
+- Production phase: Use `.claude/skills/security-review/templates/production-report.html`
+
+**Steps**:
+1. Analyze security issues from changes
+2. Generate HTML report by replacing template variables:
+   - `{{target}}` - commit hash or target description
+   - `{{date}}` - current date
+   - `{{critical_count}}`, `{{high_count}}`, `{{medium_count}}`, `{{low_count}}`, `{{info_count}}`
+   - `{{status_class}}` - "pass", "warning", or "fail"
+   - `{{status_text}}` - "✅ READY FOR {PHASE}", "⚠️ ISSUES FOUND", or "❌ CRITICAL ISSUES"
+   - `{{findings_html}}` - HTML for each finding (see template structure)
+   - `{{checklist_html}}` - Security checklist items (production only)
+   - `{{timestamp}}` - current timestamp
+3. Save HTML to: `.claude/skills/security-review/reports/security-review-<phase>-<YYYYMMDD-HHMMSS>.html`
+4. Output to terminal ONLY:
+   ```
+   ✅ Report: file://<absolute-path-to-html>
+   Status: [PASS/WARNING/FAIL] - [one sentence summary]
+   ```
+
+**Example Terminal Output**:
+```
+✅ Report: file:///home/user/project/.claude/skills/security-review/reports/security-review-mvp-20260204-143500.html
+Status: ✅ READY FOR MVP - 0 critical/high issues found
+```
+
+**❌ DO NOT**:
+- Output full report content to terminal
+- Use markdown format
+- Include verbose analysis in terminal output
 
 ---
 

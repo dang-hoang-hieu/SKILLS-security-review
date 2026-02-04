@@ -16,13 +16,16 @@ def run_review(phase, target_type, target_value, repo_path='.'):
     print(f"\n🔍 Security Review - {phase.upper()} Phase", file=sys.stderr)
     print(f"Target: {target_type} - {target_value}\n", file=sys.stderr)
 
+    # Get script directory for absolute paths
+    script_dir = Path(__file__).parent
+
     # Step 1: Run analysis
     print("📊 Step 1: Analyzing...", file=sys.stderr)
 
     if target_type == 'codebase':
-        cmd = ['python3', 'scripts/analyze_codebase.py', target_value, f'--phase={phase}']
+        cmd = ['python3', str(script_dir / 'analyze_codebase.py'), target_value, f'--phase={phase}']
     else:
-        cmd = ['python3', 'scripts/analyze_changes.py', target_value, repo_path, f'--phase={phase}']
+        cmd = ['python3', str(script_dir / 'analyze_changes.py'), target_value, repo_path, f'--phase={phase}']
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -51,7 +54,7 @@ def run_review(phase, target_type, target_value, repo_path='.'):
         temp_file = f.name
 
     # Generate report
-    cmd = ['python3', 'scripts/generate_report.py', temp_file]
+    cmd = ['python3', str(script_dir / 'generate_report.py'), temp_file]
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     # Print stderr (progress messages)

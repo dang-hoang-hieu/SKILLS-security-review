@@ -100,6 +100,28 @@ class ReportGenerator:
         self.template = self._load_template()
         self.phase = phase  # Will be set from analysis data if not provided
 
+    def _enrich_findings_with_severity(self, findings: List[Dict]) -> List[Dict]:
+        """Add severity levels to findings based on category if not present."""
+        enriched = []
+        for finding in findings:
+            # Check if severities already exist
+            if 'mvp_severity' in finding and 'prod_severity' in finding:
+                enriched.append(finding)
+                continue
+
+            # Get category and map to severity
+            category = finding.get('category', 'code_quality')
+            severity_map = self.SEVERITY_MATRIX.get(category, {'mvp': 'INFO', 'prod': 'LOW'})
+
+            # Create enriched finding
+            enriched_finding = finding.copy()
+            enriched_finding['mvp_severity'] = severity_map.get('mvp', 'INFO')
+            enriched_finding['prod_severity'] = severity_map.get('prod', 'MEDIUM')
+
+            enriched.append(enriched_finding)
+
+        return enriched
+
     def _load_template(self) -> str:
         """Load report template."""
         if self.template_path.exists():
@@ -240,6 +262,9 @@ Production: {prod_summary}
         target = analysis_data.get('target', 'Current codebase')
         frameworks = analysis_data.get('frameworks', [])
         findings = analysis_data.get('findings', [])
+
+        # Enrich findings with severity if not present
+        findings = self._enrich_findings_with_severity(findings)
 
         # Count severities for current phase
         severity_counts = self._count_by_severity(findings, phase)
