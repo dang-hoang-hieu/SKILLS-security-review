@@ -96,17 +96,18 @@ python scripts/generate_report.py analysis.json
 
 **Phase-Specific Evaluation**: Findings are rated based on selected phase for accurate prioritization.
 
-### MVP Phase (Ship Fast - Block Exploits)
-- **CRITICAL**: Hardcoded secrets, SQL injection, auth bypass, RCE
-- **HIGH**: Authorization issues, XSS, CSRF, IDOR
-- **INFO**: All other findings (rate limiting, weak crypto, headers, outdated deps, code quality)
+### MVP Phase (Ship Fast - Block Direct Exploits)
+- **CRITICAL**: Hardcoded secrets, SQL injection, authentication bypass (no brute force), RCE
+- **HIGH**: Authorization bypass, stored XSS (with injection point), CSRF on critical actions
+- **MEDIUM**: Missing rate limits (with strong passwords), weak CSP, timing attacks, reflected XSS, DoS/memory leaks
+- **INFO**: Security headers, outdated dependencies (no active CVE), monitoring, code quality
 
-*MVP focuses on immediate exploit risks only. Hardening items deferred to production.*
+*MVP focuses on vulnerabilities requiring single condition to exploit. Multi-condition or sophisticated attacks deferred to production.*
 
 ### Production Phase (Comprehensive Security)
 - **CRITICAL**: Any vulnerability allowing data breach/compromise
-- **HIGH**: Missing MFA, weak sessions, incomplete validation, XSS, CSRF
-- **MEDIUM**: Rate limiting, weak crypto, info disclosure, outdated deps, monitoring
+- **HIGH**: Missing MFA, weak sessions, incomplete validation, stored XSS, CSRF, authorization issues
+- **MEDIUM**: Rate limiting, weak crypto, CSP weaknesses, timing attacks, info disclosure, outdated deps, monitoring
 - **LOW**: Security headers, minor misconfigurations
 - **INFO**: Documentation, testing, code quality
 

@@ -141,19 +141,43 @@ For detailed examples of each vulnerability type, reference the `examples.md` fi
 
 Evaluate findings based on **selected phase**:
 
-**MVP Phase** (Time-to-market priority - ship fast, block exploits):
-- **CRITICAL**: Hardcoded secrets, SQL injection, authentication bypass, RCE
-- **HIGH**: Authorization issues, XSS, CSRF
-- **INFO**: All other findings (defer to production phase)
+**MVP Phase** (Time-to-market priority - ship fast, block direct exploits):
+- **CRITICAL**: 
+  - Hardcoded secrets (API keys, passwords directly in code)
+  - SQL injection (direct database access)
+  - Authentication bypass (no brute force required)
+  - RCE (Remote Code Execution)
+- **HIGH**: 
+  - Authorization bypass (access resources without proper auth)
+  - **Stored XSS** with confirmed injection point
+  - CSRF on critical actions (payment, deletion, privilege changes)
+- **MEDIUM**:
+  - Missing rate limits (when strong password policy exists)
+  - Weak/missing CSP headers (defense-in-depth measure)
+  - Timing attacks (requires sophisticated analysis)
+  - Reflected XSS (requires user interaction)
+  - DoS/Memory leak vulnerabilities
+- **INFO**: 
+  - Security headers (HSTS, X-Frame-Options, etc.)
+  - Outdated dependencies (no active exploit)
+  - Code quality issues
+  - Missing monitoring/logging
 
 **Production Phase** (Security-hardened - comprehensive protection):
 - **CRITICAL**: Any vulnerability allowing data breach or system compromise
-- **HIGH**: Missing MFA, weak session management, incomplete input validation, XSS, CSRF
-- **MEDIUM**: Rate limiting, weak crypto, info disclosure, outdated dependencies, missing monitoring
-- **LOW**: Security headers, minor misconfigurations
-- **INFO**: Documentation, code quality, testing recommendations
+- **HIGH**: Missing MFA, weak session management, incomplete input validation, stored XSS, CSRF, authorization issues
+- **MEDIUM**: Rate limiting, weak crypto, CSP weaknesses, info disclosure, timing attacks, outdated dependencies, missing monitoring
+- **LOW**: Security headers, minor misconfigurations, code quality
+- **INFO**: Documentation, testing recommendations, best practices
 
 **Note**: The `--phase` flag ensures only relevant severity levels are applied to findings.
+
+**Severity Rating Philosophy (Based on OWASP Research):**
+- **MVP**: Focus on single-condition exploits (direct access, no sophisticated techniques required)
+- **Production**: Include defense-in-depth measures and multi-condition vulnerabilities
+- **Rate Limiting**: Less critical with strong password policies (15+ chars); MFA more effective than rate limits (99.9% protection per Microsoft data)
+- **CSP Headers**: Defense-in-depth only; requires existing XSS injection point to be exploitable
+- **Timing Attacks**: Sophisticated technique requiring statistical analysis; low real-world exploitation rate for MVP stage
 
 **Step 4: Generate Report** (handled automatically by `review.py` script)
 
