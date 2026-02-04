@@ -221,22 +221,31 @@ You MUST generate an HTML report and output ONLY minimal text to terminal.
    - `{{checklist_html}}` - Security checklist items (production only)
    - `{{timestamp}}` - current timestamp
 3. Save HTML to: `.claude/skills/security-review/reports/security-review-<phase>-<YYYYMMDD-HHMMSS>.html`
-4. Output to terminal ONLY:
+4. **Output to terminal EXACTLY 2 lines (no more, no less)**:
    ```
    ✅ Report: file://<absolute-path-to-html>
-   Status: [PASS/WARNING/FAIL] - [one sentence summary]
+   Status: [PASS/WARNING/FAIL] - [one short sentence]
    ```
 
-**Example Terminal Output**:
+**Example Terminal Output (MVP)**:
 ```
 ✅ Report: file:///home/user/project/.claude/skills/security-review/reports/security-review-mvp-20260204-143500.html
 Status: ✅ READY FOR MVP - 0 critical/high issues found
 ```
 
-**❌ DO NOT**:
-- Output full report content to terminal
-- Use markdown format
-- Include verbose analysis in terminal output
+**Example Terminal Output (Production)**:
+```
+✅ Report: file:///home/user/project/.claude/skills/security-review/reports/security-review-production-20260204-143500.html
+Status: ⚠️ ISSUES FOUND - 2 medium issues require attention
+```
+
+**❌ CRITICAL - DO NOT**:
+- Output ANY additional text beyond the 2 lines above
+- Include summaries, lists, recommendations, or analysis in terminal
+- Use markdown formatting in terminal output
+- Add headers like "## Security Review Summary"
+- List findings or positive improvements in terminal
+- ALL details MUST be in the HTML report ONLY
 
 ---
 
