@@ -31,9 +31,9 @@ Specify review phase for accurate severity assessment:
 
 ## Review Process
 
-### Complete Workflow (One Command)
+### ⚠️ MANDATORY: Use Review Script and Template
 
-Use the unified review script that handles analysis, report generation, and file saving:
+**ALWAYS** use the unified review script - do NOT generate reports manually:
 
 ```bash
 # Full codebase review
@@ -49,10 +49,18 @@ python scripts/review.py <mvp|production> pr:123
 python scripts/review.py <mvp|production> range:main..feature
 ```
 
+**Why This is Required:**
+- Ensures consistent report format using `templates/security-report-template.md`
+- Applies correct phase-specific severity filtering
+- Generates properly formatted findings tables
+- Saves reports to standardized location
+
 **Output:**
 - Creates report file in `reports/security-review-<phase>-<timestamp>.md`
 - Displays report content in response
 - Shows file path for future reference
+
+**❌ DO NOT:** Write custom markdown reports or summaries - always invoke the script above
 
 ### Manual Step-by-Step (Advanced)
 
@@ -106,6 +114,11 @@ For each file/folder group, check against these security categories:
 - Mass assignment vulnerabilities
 - Rate limiting absence
 - Unvalidated redirects
+
+**MVP vs Production Distinction:**
+- **CSP Headers**: Weak CSP (e.g., `unsafe-inline`, `unsafe-eval`) is MEDIUM for MVP (defense-in-depth, needs XSS point), HIGH for Production
+- **Input Validation**: Missing validation on non-auth fields (email format, etc.) is MEDIUM for MVP, HIGH for Production
+- **Rate Limiting**: Memory-based or missing rate limits is MEDIUM for MVP (with strong passwords), HIGH for Production
 
 #### 📦 Dependencies & Configuration
 - Outdated dependencies with known CVEs
@@ -179,6 +192,15 @@ Evaluate findings based on **selected phase**:
 - **CSP Headers**: Defense-in-depth only; requires existing XSS injection point to be exploitable
 - **Timing Attacks**: Sophisticated technique requiring statistical analysis; low real-world exploitation rate for MVP stage
 
+**Common Misclassifications to Avoid:**
+- ❌ CSP with `unsafe-inline` → NOT High/Critical for MVP (needs XSS injection point first) → MEDIUM
+- ❌ Missing email domain validation → NOT High for MVP (input validation, not auth bypass) → MEDIUM
+- ❌ Rate limit bypass via header spoofing → NOT High for MVP (needs weak password) → MEDIUM
+- ❌ Memory-based rate limiting → NOT Critical for MVP (production concern) → INFO for MVP, MEDIUM for Production
+- ✅ Hardcoded API keys → CRITICAL for MVP (direct exploit)
+- ✅ SQL injection → CRITICAL for MVP (direct DB access)
+- ✅ Missing authentication on sensitive endpoint → CRITICAL for MVP (direct bypass)
+
 **Step 4: Generate Report** (handled automatically by `review.py` script)
 
 ---
@@ -193,6 +215,33 @@ The analysis scripts automatically detect and apply framework-specific checks:
 - **Spring Boot**: Verify @PreAuthorize usage, SQL injection in JPA, CORS config
 - **React/Vue**: Check for dangerouslySetInnerHTML, XSS in props
 - **FastAPI**: Validate dependency injection security, Pydantic validation
+
+## Example Severity Ratings
+
+To ensure consistency, here are examples of correct severity ratings:
+
+### MVP Phase Examples
+
+| Finding | MVP Severity | Rationale |
+|---------|-------------|-----------|
+| Hardcoded API key in code | CRITICAL | Direct exposure, no additional conditions needed |
+| SQL injection in user input | CRITICAL | Direct database access possible |
+| Admin endpoint without authentication | CRITICAL | Direct access without credentials |
+| CSP allows `unsafe-inline` and `unsafe-eval` | MEDIUM | Requires XSS injection point to exploit |
+| Missing email format validation | MEDIUM | Input validation issue, not authentication bypass |
+| Rate limiting uses memory (no Redis) | INFO | MVP acceptable, production concern |
+| Missing HSTS header | INFO | Security hardening, not immediate exploit |
+| Memory-based session store | INFO | MVP acceptable with small user base |
+
+### Production Phase Examples  
+
+| Finding | Production Severity | Rationale |
+|---------|-------------------|-----------|
+| CSP allows `unsafe-inline` | HIGH | Defense-in-depth measure |
+| Missing email domain validation | HIGH | Input validation completeness |
+| Rate limiting uses memory | MEDIUM | Scalability and DoS concern |
+| Missing rate limit on login | MEDIUM | Brute force prevention |
+| Missing security headers | LOW | Hardening measures |
 
 ## Output Format
 
