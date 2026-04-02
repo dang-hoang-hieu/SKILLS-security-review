@@ -235,20 +235,28 @@ def main():
         pr_number = target.split(':', 1)[1]
         print(f"🔍 Analyzing PR #{pr_number}...", file=sys.stderr)
         diff_text = analyzer.get_pr_diff(pr_number)
+        review_type = f'Pull Request #{pr_number}'
     elif target.startswith('range:'):
         range_spec = target.split(':', 1)[1]
-        start, end = range_spec.split('..')
+        # Support both .. and ... separators
+        parts = re.split(r'\.{2,3}', range_spec, maxsplit=1)
+        if len(parts) != 2:
+            print(f"❌ Invalid range format. Use range:start..end or range:start...end", file=sys.stderr)
+            sys.exit(1)
+        start, end = parts[0].strip(), parts[1].strip()
         print(f"🔍 Analyzing range {start}..{end}...", file=sys.stderr)
         diff_text = analyzer.get_range_diff(start, end)
+        review_type = f'Commit Range {start}..{end}'
     elif target.startswith('commit:'):
-        # Extract commit hash from commit: prefix
         commit_hash = target.split(':', 1)[1]
         print(f"🔍 Analyzing commit {commit_hash}...", file=sys.stderr)
         diff_text = analyzer.get_commit_diff(commit_hash)
+        review_type = f'Commit {commit_hash}'
     else:
-        # Assume commit hash without prefix
+        # Bare commit hash
         print(f"🔍 Analyzing commit {target}...", file=sys.stderr)
         diff_text = analyzer.get_commit_diff(target)
+        review_type = f'Commit {target}'
 
     if not diff_text:
         print("❌ No changes found or git command failed", file=sys.stderr)
@@ -257,10 +265,8 @@ def main():
     # Analyze
     print("📊 Parsing and analyzing changes...", file=sys.stderr)
     summary = analyzer.analyze_changes(diff_text)
-
-    # Add metadata
     summary['phase'] = phase
-    summary['review_type'] = 'Git Changes Review'
+    summary['review_type'] = review_type
     summary['target'] = target
 
     # Print summary

@@ -5,7 +5,7 @@ context: fork
 agent: general-purpose
 allowed-tools: [read_file, write_file, grep_search, semantic_search, run_in_terminal]
 disable-model-invocation: false
-argument-hint: [mvp|production] [codebase|commit:<hash>|pr:<number>|path:<directory>]
+argument-hint: [mvp|production] [codebase|commit:<hash>|pr:<number>|range:<start>..<end>|path:<directory>]
 ---
 
 # Security Review Skill
@@ -25,7 +25,8 @@ Specify review phase for accurate severity assessment:
 1. **Full codebase review**: `/security-review mvp` or `/security-review production codebase`
 2. **Commit review**: `/security-review mvp commit:abc123`
 3. **Pull request review**: `/security-review production pr:123`
-4. **Directory review**: `/security-review mvp path:src/auth`
+4. **Commit range review**: `/security-review mvp range:main..feature` or `/security-review production range:v1.0...v1.1`
+5. **Directory review**: `/security-review mvp path:src/auth`
 
 **Default**: If phase not specified, defaults to `production` (stricter checks)
 

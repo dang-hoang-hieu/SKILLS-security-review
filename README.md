@@ -53,7 +53,14 @@ security-review/
    /security-review production pr:42
    ```
 
-4. **Directory review**:
+4. **Commit range review**:
+   ```
+   /security-review mvp range:main..feature
+   /security-review production range:abc123..def456
+   /security-review production range:v1.0...v1.1
+   ```
+
+5. **Directory review**:
    ```
    /security-review path:src/auth
    ```
@@ -68,6 +75,8 @@ python scripts/review.py mvp /path/to/project
 python scripts/review.py production .
 python scripts/review.py mvp commit:abc123
 python scripts/review.py production pr:42
+python scripts/review.py mvp range:main..feature
+python scripts/review.py production range:v1.0...v1.1
 ```
 
 **Advanced: Manual step-by-step**
